@@ -97,3 +97,67 @@ func TestGet(t *testing.T) {
 	}
 
 }
+
+var dummyListConfigFile = `
+list:
+  - true
+  - false
+config:
+  servers:
+    - www.google.com
+    - www.cnn.com
+    - www.example.com
+`
+var configGetListTests = []struct {
+	Spec string
+	Want []string
+	Err  string
+}{
+	{"config.servers", []string{"www.google.com", "www.cnn.com", "www.example.com"}, ""},
+}
+
+func TestGetList(t *testing.T) {
+	config := Config(dummyListConfigFile)
+
+	for _, test := range configGetListTests {
+		got, err := config.GetList(test.Spec)
+		if want := test.Want; !testEqString(got, want) {
+			t.Errorf("Get(%q) = %q, want %q", test.Spec, got, want)
+		}
+
+		var gotErr string
+		switch err {
+		case nil:
+			gotErr = ""
+		default:
+			gotErr = err.Error()
+		}
+		if want := test.Err; gotErr != want {
+			t.Errorf("Get(%q) error %#q, want %#q", test.Spec, gotErr, want)
+		}
+	}
+
+}
+
+func testEqString(a, b []string) bool {
+
+	if a == nil && b == nil {
+		return true
+	}
+
+	if a == nil || b == nil {
+		return false
+	}
+
+	if len(a) != len(b) {
+		return false
+	}
+
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+
+	return true
+}

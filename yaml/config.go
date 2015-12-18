@@ -171,6 +171,85 @@ func (f *File) Require(spec string) string {
 	return str
 }
 
+// Get retrieves a list from the file specified by a string of the same
+// format as that expected by Child.  If the final node is not a List or node content is not a Scalar, Get
+// will return an error.
+func (f *File) GetList(spec string) ([]string, error) {
+	cnode, err := Child(f.Root, spec)
+	if err != nil {
+		return nil, err
+	}
+
+	if cnode == nil {
+		return nil, &NodeNotFound{
+			Full: spec,
+			Spec: spec,
+		}
+	}
+
+	lst, ok := cnode.(List)
+	if !ok {
+		return nil, &NodeTypeMismatch{
+			Full:     spec,
+			Spec:     spec,
+			Token:    "$",
+			Expected: "yaml.List",
+			Node:     cnode,
+		}
+	}
+
+	rst := make([]string, len(lst))
+	for idx, node := range lst {
+		scalar, ok := node.(Scalar)
+		if !ok {
+			return nil, &NodeTypeMismatch{
+				Full:     spec,
+				Spec:     spec,
+				Token:    "$",
+				Expected: "yaml.Scalar",
+				Node:     node,
+			}
+		}
+		val := scalar.String()
+		rst[idx] = val
+	}
+	return rst, nil
+
+}
+
+func (f *File) GetListInt(spec string) ([]int64, error) {
+	slst, err := f.GetList(spec)
+	if err != nil {
+		return nil, err
+	}
+	ilst := make([]int64, len(slst))
+	for idx, s := range slst {
+		i, err := strconv.ParseInt(s, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		ilst[idx] = i
+	}
+	return ilst, nil
+}
+
+func (f *File) GetListBool(spec string) ([]bool, error) {
+	slst, err := f.GetList(spec)
+	if err != nil {
+		return nil, err
+	}
+
+	blst := make([]bool, len(slst))
+	for idx, s := range slst {
+		b, err := strconv.ParseBool(s)
+		if err != nil {
+			return nil, err
+		}
+		blst[idx] = b
+	}
+	return blst, nil
+}
+
 // Child retrieves a child node from the specified node as follows:
 //   .mapkey   - Get the key 'mapkey' of the Node, which must be a Map
 //   [idx]     - Choose the index from the current Node, which must be a List
